@@ -18,6 +18,7 @@ npm i --save enfore-peer-dependencies
 ### Usage
 ```js
 import 'enforce-peer-dependencies';
+import 'enforce-peer-dependencies/debug'; // for debugging
 ```
 
 #### Jest configuration.
@@ -26,6 +27,7 @@ To add to jest just add to the configuration
 ```json
 {
     "resolver": "enforce-peer-dependencies/jest" 
+    "resolver": "enforce-peer-dependencies/debug-jest" // for debugging
 }
 ```
 
