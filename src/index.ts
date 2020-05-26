@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import BuiltinModule from 'module';
 
+const DEBUG_MODE = process.env.DEBUG_ENFORCE_PEER_DPENDENCIES !== undefined;
+
 import Module = NodeJS.Module;
 
 interface PackageJson {
@@ -175,6 +177,10 @@ nodeModule._resolveFilename = function resolveFilename(...args : any[]) {
             } catch (e) {
                 // do nothing
             }
+        }
+
+        if (DEBUG_MODE) {
+            console.log('resolving\nto: ' + finalPath + '\nfrom: ' + callPreviousMethod() + '\n');
         }
 
         return finalPath;

@@ -3,8 +3,9 @@ const CopyPlugin = require('copy-webpack-plugin');
 const nodeExternals = require('webpack-node-externals');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
-module.exports = {
-    entry: './src/index.ts',
+module.exports = ['index', 'debug'].map(name => ({
+    entry: './src/' + name + '.ts',
+    mode: name !== 'debug' ? 'production' : 'development',
     module: {
         rules: [
             {
@@ -19,7 +20,7 @@ module.exports = {
         extensions: [ '.tsx', '.ts', '.js' ],
     },
     output: {
-        filename: 'index.js',
+        filename: name + '.js',
         path: path.resolve(__dirname, 'dist'),
         libraryTarget: 'commonjs2'
     },
@@ -35,4 +36,4 @@ module.exports = {
     externals: [
         nodeExternals(),
     ]
-};
+}));
