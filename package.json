@@ -1,0 +1,22 @@
+{
+  "name": "enforce-peer-dependencies",
+  "version": "1.0.0",
+  "description": "Enforces peer dependencies from package.json",
+  "main": "index.js",
+  "repository": "https://github.com/kevupton/enforce-peer-dependencies",
+  "author": "Kevin Upton",
+  "license": "MIT",
+  "scripts": {
+    "build": "webpack"
+  },
+  "devDependencies": {
+    "@types/node": "^14.0.5",
+    "@webpack-cli/init": "^0.3.0",
+    "copy-webpack-plugin": "^6.0.1",
+    "ts-loader": "^7.0.5",
+    "typescript": "^3.9.3",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11",
+    "webpack-node-externals": "^1.7.2"
+  }
+}
