@@ -2,9 +2,9 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const nodeExternals = require('webpack-node-externals');
 
-module.exports = ['index', 'debug', 'jest'].map(name => ({
+module.exports = ['index', 'debug', 'jest', 'debug-jest'].map(name => ({
     entry: './src/' + name + '.ts',
-    mode: name !== 'debug' ? 'production' : 'development',
+    mode: !name.startsWith('debug') ? 'production' : 'development',
     devtool: false,
     module: {
         rules: [
