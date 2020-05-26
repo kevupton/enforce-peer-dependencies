@@ -1,6 +1,7 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const nodeExternals = require('webpack-node-externals');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
 module.exports = {
     entry: './src/index.ts',
@@ -29,6 +30,7 @@ module.exports = {
                 path.join(__dirname, 'README.md'),
             ],
         }),
+        new CleanWebpackPlugin(),
     ],
     externals: [
         nodeExternals(),
