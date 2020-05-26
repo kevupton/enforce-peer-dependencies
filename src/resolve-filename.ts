@@ -22,14 +22,12 @@ function fetchPeerDependencies(packageJsonPath: string): string[] {
 function resolveFilename(
     request: string,
     pathsGenerator: Generator<string[], void, any>,
-    callPreviousMethod: () => string,
+    originalValues: string,
     resolveExtensions = ['js', 'json'],
     DEBUG_MODE = false,
 ) {
-
-    const original = callPreviousMethod();
-    if (!original.startsWith('/')) {
-        return original;
+    if (!originalValues.startsWith('/')) {
+        return originalValues;
     }
 
 
@@ -50,7 +48,7 @@ function resolveFilename(
             if (DEBUG_MODE) {
                 console.warn('Cannot find package json path from paths', paths);
             }
-            return callPreviousMethod();
+            return originalValues;
         }
 
         const peerDependencies = fetchPeerDependencies(packageJsonPath);
@@ -59,7 +57,7 @@ function resolveFilename(
         if (!peerDependencies.includes(request)) {
             // if it does not have it in the peer dependencies for the very first iteration then continue like normal
             // if (iterations === 0) {
-            //     return callPreviousMethod();
+            //     return original;
             // }
             break;
         }
@@ -76,7 +74,7 @@ function resolveFilename(
             console.warn('All paths apparently have peer dependencies', paths);
         }
 
-        return callPreviousMethod();
+        return originalValues;
     }
 
     /*
@@ -129,7 +127,7 @@ function resolveFilename(
         if (DEBUG_MODE) {
             console.warn('Could not resolve package', { request, paths });
         }
-        return callPreviousMethod();
+        return originalValues;
     }
 
     if (finalPiece && finalPath) {
@@ -165,7 +163,7 @@ function resolveFilename(
                             paths, error: e, mainFile, modulePath, request
                         });
                     }
-                    return callPreviousMethod();
+                    return originalValues;
                 }
             }
         }
@@ -179,7 +177,7 @@ function resolveFilename(
         });
     }
 
-    return callPreviousMethod();
+    return originalValues;
 }
 
 export default resolveFilename;

@@ -94,24 +94,25 @@ function* createIterator(options: ResolverOptions) {
 
 
 function jestResolver(name: string, options: ResolverOptions) {
-    const callPreviousMethod = () => options.defaultResolver(name, options);
+    const originalValue = options.defaultResolver(name, options);
 
     debug = process.env.DEBUG_ENFORCE_PEER_DEPENDENCIES !== undefined;
 
-    if (name.startsWith('.') || !options.moduleDirectory) {
-        return callPreviousMethod();
+    if (name.startsWith('.') || !options.moduleDirectory || !originalValue.startsWith('/')) {
+        return originalValue;
     }
 
     list.push({ name, options });
+
     if (debug) {
         console.log(debug, name, list.length);
         console.log(options);
     }
 
-    const output = resolveFilename(name, createIterator(options), callPreviousMethod, options.extensions, debug);
+    const output = resolveFilename(name, createIterator(options), originalValue, options.extensions, debug);
 
     if (debug) {
-        console.log({ to: output, from: callPreviousMethod() });
+        console.log({ to: output, from: originalValue });
     }
 
     return output;

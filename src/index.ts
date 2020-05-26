@@ -29,21 +29,21 @@ nodeModule._resolveFilename = function (...args: any[]) {
 
     debug = process.env.DEBUG_ENFORCE_PEER_DEPENDENCIES !== undefined;
 
-    const callPreviousMethod = () => previousMethod.apply(this, args);
+    const originalValue = previousMethod.apply(this, args);
 
-    if (request.startsWith('.')) {
-        return callPreviousMethod();
+    if (request.startsWith('.') || !originalValue.startsWith('/')) {
+        return originalValue;
     }
 
     // we dont want to look at the root module. We want to look at any possible linked module.
     if (!packageModule.parent) {
-        return callPreviousMethod();
+        return originalValue;
     }
 
-    const output = resolveFilename(request, createIterator(packageModule), callPreviousMethod, undefined,process.env.DEBUG_ENFORCE_PEER_DEPENDENCIES !== undefined);
+    const output = resolveFilename(request, createIterator(packageModule), originalValue, undefined,process.env.DEBUG_ENFORCE_PEER_DEPENDENCIES !== undefined);
 
     if (debug) {
-        console.log({ to: output, from: callPreviousMethod() });
+        console.log({ to: output, from: originalValue });
     }
 
     return output;
