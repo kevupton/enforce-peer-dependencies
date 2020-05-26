@@ -1,9 +1,8 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const nodeExternals = require('webpack-node-externals');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
-module.exports = ['index', 'debug'].map(name => ({
+module.exports = ['index', 'debug', 'jest'].map(name => ({
     entry: './src/' + name + '.ts',
     mode: name !== 'debug' ? 'production' : 'development',
     devtool: false,
@@ -32,7 +31,6 @@ module.exports = ['index', 'debug'].map(name => ({
                 path.join(__dirname, 'README.md'),
             ],
         }),
-        new CleanWebpackPlugin(),
     ],
     externals: [
         nodeExternals(),

@@ -8,13 +8,14 @@
   "author": "Kevin Upton",
   "license": "MIT",
   "scripts": {
-    "build": "webpack"
+    "build": "rimraf dist && webpack"
   },
   "devDependencies": {
     "@types/node": "^14.0.5",
     "@webpack-cli/init": "^0.3.0",
     "clean-webpack-plugin": "^3.0.0",
     "copy-webpack-plugin": "^6.0.1",
+    "rimraf": "^3.0.2",
     "ts-loader": "^7.0.5",
     "typescript": "^3.9.3",
     "webpack": "^4.43.0",
