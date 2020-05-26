@@ -1,6 +1,6 @@
 {
   "name": "enforce-peer-dependencies",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Enforces peer dependencies from package.json",
   "main": "index.js",
   "repository": "https://github.com/kevupton/enforce-peer-dependencies",
