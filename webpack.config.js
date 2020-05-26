@@ -6,6 +6,7 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 module.exports = ['index', 'debug'].map(name => ({
     entry: './src/' + name + '.ts',
     mode: name !== 'debug' ? 'production' : 'development',
+    devtool: false,
     module: {
         rules: [
             {
