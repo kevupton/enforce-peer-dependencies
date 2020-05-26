@@ -20,5 +20,14 @@ npm i --save enfore-peer-dependencies
 import 'enforce-peer-dependencies';
 ```
 
+#### Jest configuration.
+To add to jest just add to the configuration
+`jest.config.json`
+```json
+{
+    "resolver": "enforce-peer-dependencies/jest" 
+}
+```
+
 #### Ceveats
 Maybe in the future we can just do it for NPM Linked packages.

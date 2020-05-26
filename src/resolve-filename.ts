@@ -22,14 +22,20 @@ function fetchPeerDependencies(packageJsonPath: string): string[] {
 function resolveFilename(
     request: string,
     pathsGenerator: Generator<string[], void, any>,
-    callPreviousMethod: () => void,
+    callPreviousMethod: () => string,
     resolveExtensions = ['js', 'json'],
     DEBUG_MODE = false,
 ) {
 
-    // if (DEBUG_MODE) {
-    //     console.log('enforce-peer-dependencies is currently in DEBUG_MODE')
-    // }
+    const original = callPreviousMethod();
+    if (!original.startsWith('/')) {
+        return original;
+    }
+
+
+    if (DEBUG_MODE) {
+        console.log('resolving ', request);
+    }
 
     let paths: string[] | false | undefined;
     let iterations = 0;
@@ -85,7 +91,7 @@ function resolveFilename(
     let finalPiece: fs.Stats | undefined;
     let finalPath: string | undefined;
 
-    paths.find(basicPath => {
+    const result = paths.find(basicPath => {
         const modulesPath = /node_modules\/?$/.test(basicPath) ? basicPath : path.join(basicPath, 'node_modules');
 
         for (let i = 1; i <= pieces.length; i++) {
@@ -100,9 +106,12 @@ function resolveFilename(
                 // only check the file extensions if its on the last piece
                 if (i === pieces.length) {
                     // check all file extensions with the final path
-                    for (const extension of resolveExtensions) {
+                    for (const ext of resolveExtensions) {
                         // check all filepaths that potentially have a .js extension
-                        finalPath = path.join(modulesPath, ...pieces.slice(0, i - 1), `${pieces[i]}${extension.startsWith('.') ? extension : `.${extension}`}`);
+                        finalPath = path.join(modulesPath, ...pieces.slice(0, i - 1), `${pieces[i - 1]}${ext.startsWith('.') ? ext : `.${ext}`}`);
+                        if (DEBUG_MODE) {
+                            console.log('looking at ', finalPath);
+                        }
                         try {
                             finalPiece = fs.lstatSync(finalPath);
                         } catch (e) {
@@ -115,6 +124,13 @@ function resolveFilename(
         }
         return finalPiece;
     });
+
+    if (!result) {
+        if (DEBUG_MODE) {
+            console.warn('Could not resolve package', { request, paths });
+        }
+        return callPreviousMethod();
+    }
 
     if (finalPiece && finalPath) {
         // if the final piece is a directory get the main file from package json
@@ -146,16 +162,12 @@ function resolveFilename(
                 if (!result) {
                     if (DEBUG_MODE) {
                         console.warn('Failed to resolve module.', {
-                            paths, error: e, mainFile, modulePath,
+                            paths, error: e, mainFile, modulePath, request
                         });
                     }
                     return callPreviousMethod();
                 }
             }
-        }
-
-        if (DEBUG_MODE) {
-            console.log('resolving\nto: ' + finalPath + '\nfrom: ' + callPreviousMethod() + '\n');
         }
 
         return finalPath;
