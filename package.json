@@ -1,6 +1,6 @@
 {
   "name": "enforce-peer-dependencies",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Enforces peer dependencies from package.json",
   "main": "index.js",
   "typings": "index.d.ts",

@@ -196,7 +196,6 @@ function jestResolver(name: string, options: ResolverOptions) {
     const originalValue = options.defaultResolver(name, options);
 
     debug = process.env.DEBUG_ENFORCE_PEER_DEPENDENCIES !== undefined;
-    debug = name.startsWith('@dlp');
 
     if (name.startsWith('.') || !options.moduleDirectory || !originalValue.startsWith('/')) {
         if (debug) {
