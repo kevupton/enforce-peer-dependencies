@@ -3,7 +3,13 @@ import {splitPath} from "./split-path";
 import {fetchPackageJson, fetchPackageJsonPath} from "./package-json";
 import path from "path";
 
-const list: {name: string; options: ResolverOptions}[] = [];
+interface PreviousListing {
+    name: string;
+    options: ResolverOptions,
+    index: number
+}
+
+const list: PreviousListing[] = [];
 
 let debug = false;
 
@@ -16,7 +22,7 @@ interface ResolverOptions {
     rootDir?: string[] | string
 }
 
-function isSymLinked (options: ResolverOptions) {
+function isSymLinked(options: ResolverOptions) {
     if (!options.paths || !options.paths.length || !options.rootDir) {
         return false;
     }
@@ -27,7 +33,7 @@ function isSymLinked (options: ResolverOptions) {
         !Array.isArray(options.paths) && options.basedir.startsWith(options.paths);
 }
 
-function fetchParentPackageName(paths: string[]) : string | undefined {
+function fetchParentPackageName(paths: string[]): string | undefined {
     const packageJsonPath = fetchPackageJsonPath(paths);
 
     if (!packageJsonPath) {
@@ -43,8 +49,8 @@ function fetchParentPackageName(paths: string[]) : string | undefined {
     return packageJson.name;
 }
 
-function fetchPreviousListing(name: string) {
-    for (let i = list.length - 1; i >= 0; i--) {
+function fetchPreviousListing(name: string, previousIndex?: number) {
+    for (let i = (previousIndex || list.length) - 1; i >= 0; i--) {
         if (list[i].name === name) {
             return list[i];
         }
@@ -52,7 +58,7 @@ function fetchPreviousListing(name: string) {
 }
 
 function* createIterator(options: ResolverOptions) {
-    const { paths = [], rootDir , basedir} = options;
+    const {paths = [], rootDir, basedir} = options;
 
     if (Array.isArray(rootDir) || !rootDir) {
         throw new Error('unable to process array');
@@ -64,6 +70,8 @@ function* createIterator(options: ResolverOptions) {
 
 
     let activeDir = basedir;
+    let previousListing : PreviousListing | undefined;
+
     const root = path.parse(rootDir).root;
 
     do {
@@ -78,13 +86,15 @@ function* createIterator(options: ResolverOptions) {
             if (!name) {
                 return;
             }
-            const previousListing = fetchPreviousListing(name);
+
+            previousListing = fetchPreviousListing(name, previousListing?.index);
+
             if (!previousListing) {
                 return;
             }
+
             activeDir = previousListing.options.basedir;
-        }
-        else {
+        } else {
             activeDir = path.join(activeDir, '../');
         }
 
@@ -102,7 +112,7 @@ function jestResolver(name: string, options: ResolverOptions) {
         return originalValue;
     }
 
-    list.push({ name, options });
+    list.push({name, options, index: list.length});
 
     if (debug) {
         console.log(debug, name, list.length);
@@ -112,7 +122,7 @@ function jestResolver(name: string, options: ResolverOptions) {
     const output = resolveFilename(name, createIterator(options), originalValue, options.extensions, debug);
 
     if (debug) {
-        console.log({ to: output, from: originalValue });
+        console.log({to: output, from: originalValue});
     }
 
     return output;
