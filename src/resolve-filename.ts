@@ -53,6 +53,10 @@ function resolveFilename(
 
         const peerDependencies = fetchPeerDependencies(packageJsonPath);
 
+        if (DEBUG_MODE) {
+            console.log('peer dependencies for', packageJsonPath, peerDependencies);
+        }
+
         // if this current module is non existent in the peer dependencies then resolve it like normal.
         if (!peerDependencies.includes(request)) {
             // if it does not have it in the peer dependencies for the very first iteration then continue like normal
@@ -120,7 +124,10 @@ function resolveFilename(
                 return false;
             }
         }
-        return finalPiece;
+        if (DEBUG_MODE) {
+            console.log('found', finalPath);
+        }
+        return true;
     });
 
     if (!result) {
