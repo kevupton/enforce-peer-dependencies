@@ -22,10 +22,23 @@ interface ResolverOptions {
     rootDir?: string[] | string
 }
 
+const cachedRootDir = new Map<string, string>();
+
 function isSymLinked(options: ResolverOptions) {
-    return options.rootDir && (
-        Array.isArray(options.rootDir) && !options.rootDir.some(rootDir => options.basedir.startsWith(rootDir)) ||
-        !Array.isArray(options.rootDir) && !options.basedir.startsWith(options.rootDir)
+    if (Array.isArray(options.rootDir) || !options.rootDir) {
+        console.warn('Unsupported root dir', options);
+        return;
+    }
+    const rootDir = cachedRootDir.get(options.rootDir);
+
+    if (!rootDir) {
+        console.warn('No saved root dir', options);
+        return;
+    }
+
+    return rootDir && (
+        Array.isArray(rootDir) && !rootDir.some(rootDir => options.basedir.startsWith(rootDir)) ||
+        !Array.isArray(rootDir) && !options.basedir.startsWith(rootDir)
     ) || options.paths && (
         Array.isArray(options.paths) && !options.paths.some(path => options.basedir.startsWith(path)) ||
         !Array.isArray(options.paths) && !options.basedir.startsWith(options.paths)
@@ -183,6 +196,7 @@ function jestResolver(name: string, options: ResolverOptions) {
     const originalValue = options.defaultResolver(name, options);
 
     debug = process.env.DEBUG_ENFORCE_PEER_DEPENDENCIES !== undefined;
+    debug = name.startsWith('@dlp');
 
     if (name.startsWith('.') || !options.moduleDirectory || !originalValue.startsWith('/')) {
         if (debug) {
@@ -213,8 +227,25 @@ function jestResolver(name: string, options: ResolverOptions) {
         return originalValue;
     }
 
+    if (!cachedRootDir.has(options.rootDir)) {
+        const packageJsonPath = fetchPackageJsonPath(splitPath(options.rootDir));
 
-    const output = resolveFilename(name, createIterator(listItem), originalValue, options.rootDir, options.extensions, debug);
+        if (!packageJsonPath) {
+            if (debug) {
+                console.warn('Could not find root directory', options);
+            }
+            return originalValue;
+        }
+
+        cachedRootDir.set(options.rootDir, path.join(packageJsonPath, '../'));
+
+    }
+
+    if (debug) {
+        console.log('ROOT DIR', cachedRootDir.get(options.rootDir));
+    }
+
+    const output = resolveFilename(name, createIterator(listItem), originalValue, cachedRootDir.get(options.rootDir) || options.rootDir, options.extensions, debug);
 
     if (debug) {
         console.log('RESULTS', {to: output, from: originalValue});
