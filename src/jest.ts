@@ -185,6 +185,9 @@ function jestResolver(name: string, options: ResolverOptions) {
     debug = process.env.DEBUG_ENFORCE_PEER_DEPENDENCIES !== undefined;
 
     if (name.startsWith('.') || !options.moduleDirectory || !originalValue.startsWith('/')) {
+        if (debug) {
+            console.debug('ignoring', name);
+        }
         return originalValue;
     }
 
@@ -199,7 +202,7 @@ function jestResolver(name: string, options: ResolverOptions) {
     const output = resolveFilename(name, createIterator(listItem), originalValue, options.extensions, debug);
 
     if (debug) {
-        console.log({to: output, from: originalValue});
+        console.log('RESULTS', {to: output, from: originalValue});
     }
 
     return output;

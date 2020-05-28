@@ -116,7 +116,14 @@ function resolveFilename(
                         }
                         try {
                             finalPiece = fs.lstatSync(finalPath);
+                            if (DEBUG_MODE) {
+                                console.log('found', finalPath);
+                            }
+                            return true;
                         } catch (e) {
+                            if (DEBUG_MODE) {
+                                console.warn(e.message);
+                            }
                             // let the return false take place
                         }
                     }

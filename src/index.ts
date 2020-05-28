@@ -43,7 +43,7 @@ nodeModule._resolveFilename = function (...args: any[]) {
     const output = resolveFilename(request, createIterator(packageModule), originalValue, undefined,process.env.DEBUG_ENFORCE_PEER_DEPENDENCIES !== undefined);
 
     if (debug) {
-        console.log({ to: output, from: originalValue });
+        console.log('RESULTS', { to: output, from: originalValue });
     }
 
     return output;
