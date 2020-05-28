@@ -5,12 +5,14 @@ export interface PackageJson {
     [key: string]: any;
 }
 
+export function toPackageJsonPath(modulePath: string) {
+    return path.join(modulePath.replace(/node_modules$/, ''), 'package.json')
+}
+
 export function fetchPackageJsonPath(paths: string[]) {
     return paths
         // remove node_modules from the end of all directories, and add package.json
-        .map(modulePath =>
-            path.join(modulePath.replace(/node_modules$/, ''), 'package.json'),
-        )
+        .map(toPackageJsonPath)
         // find the first directory that has a package.json
         .find(packageJsonPath => fs.existsSync(packageJsonPath));
 }

@@ -199,7 +199,22 @@ function jestResolver(name: string, options: ResolverOptions) {
 
     list.push(listItem);
 
-    const output = resolveFilename(name, createIterator(listItem), originalValue, options.extensions, debug);
+    if (Array.isArray(options.rootDir)) {
+        if (debug) {
+            console.warn('Unsupported array for rootDir');
+        }
+        return originalValue;
+    }
+
+    if (!options.rootDir) {
+        if (debug) {
+            console.warn('RootDir is undefined');
+        }
+        return originalValue;
+    }
+
+
+    const output = resolveFilename(name, createIterator(listItem), originalValue, options.rootDir, options.extensions, debug);
 
     if (debug) {
         console.log('RESULTS', {to: output, from: originalValue});

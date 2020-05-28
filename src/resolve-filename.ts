@@ -1,15 +1,20 @@
 import fs from 'fs';
 import path from 'path';
-import {fetchPackageJson, fetchPackageJsonPath, PackageJson} from "./package-json";
+import {fetchPackageJson, fetchPackageJsonPath, PackageJson, toPackageJsonPath} from "./package-json";
 
 function fetchMainFile(directory: string) {
     return (fetchPackageJson(path.join(directory, 'package.json')) || {}).main || 'index.js';
 }
 
-function fetchPeerDependencies(packageJsonPath: string): string[] {
+function fetchPeerDependencies(packageJsonPath: string): string[] | undefined {
     try {
         // Read the package json into a object. Or at least try to.
         const packageJson: PackageJson | undefined = fetchPackageJson(packageJsonPath);
+
+        if (!packageJson) {
+            return undefined;
+        }
+
         // return a list of all the keys. Or modules which should be peer dependencies.
         return Object.keys(packageJson?.peerDependencies || {});
     } catch (e) {
@@ -18,11 +23,104 @@ function fetchPeerDependencies(packageJsonPath: string): string[] {
     }
 }
 
+function getDependencyFilename(packageName: string, basicPath: string, resolveExtensions: string[], DEBUG_MODE = false) {
+
+    let finalPiece: fs.Stats | undefined;
+    let finalPath: string | undefined;
+
+    const requestPieces = packageName.split('/');
+
+    const modulesPath = /node_modules\/?$/.test(basicPath) ? basicPath : path.join(basicPath, 'node_modules');
+
+    for (let i = 1; i <= requestPieces.length; i++) {
+        finalPath = path.join(modulesPath, ...requestPieces.slice(0, i));
+        if (DEBUG_MODE) {
+            console.log('looking at ', finalPath);
+        }
+
+        // check if this file exists. Not looking navigating to a linked directory.
+        if (fs.existsSync(finalPath)) {
+            finalPiece = fs.lstatSync(finalPath);
+            if (DEBUG_MODE) {
+                console.info('package path', finalPath);
+            }
+            break;
+        }
+
+        // only check the file extensions if its on the last piece
+        if (i !== requestPieces.length) {
+            continue;
+        }
+
+        // check all file extensions with the final path
+        for (const ext of resolveExtensions) {
+            // check all filepaths that potentially have a .js extension
+            finalPath = path.join(modulesPath, ...requestPieces.slice(0, i - 1), `${requestPieces[i - 1]}${ext.startsWith('.') ? ext : `.${ext}`}`);
+
+            if (DEBUG_MODE) {
+                console.log('looking at ', finalPath);
+            }
+
+            if (fs.existsSync(finalPath)) {
+                if (DEBUG_MODE) {
+                    console.info('found', finalPath);
+                }
+
+                return finalPath;
+            }
+        }
+    }
+
+    if (!finalPath || !finalPiece) {
+        return undefined;
+    }
+
+    // if the final piece is a directory get the main file from package json
+    if (!finalPiece.isDirectory() && !finalPiece.isSymbolicLink()) {
+        return finalPath;
+    }
+
+    const modulePath = finalPath;
+    const mainFile = fetchMainFile(finalPath);
+
+    finalPath = path.join(finalPath, mainFile);
+
+    if (!fs.existsSync(finalPath)) {
+        return undefined;
+    }
+
+    // check to see what type of piece the final piece is now
+    finalPiece = fs.lstatSync(finalPath);
+
+    if (finalPiece.isDirectory()) {
+        finalPath = path.join(finalPath, 'index.js');
+
+        if (fs.existsSync(finalPath)) {
+            return finalPath;
+        }
+    }
+
+    for (const ext of resolveExtensions) {
+        finalPath = path.join(modulePath, mainFile + (ext.startsWith('.') ? ext : `.${ext}`));
+
+        if (fs.existsSync(finalPath)) {
+            return finalPath;
+        }
+    }
+
+    if (DEBUG_MODE) {
+        console.warn('Failed to resolve module.', {
+            basicPath, packageName, mainFile, modulePath
+        });
+    }
+}
+
 
 function resolveFilename(
     request: string,
     pathsGenerator: Generator<string[], void, any>,
     originalValues: string,
+    rootDir :string,
     resolveExtensions = ['js', 'json'],
     DEBUG_MODE = false,
 ) {
@@ -30,165 +128,52 @@ function resolveFilename(
         return originalValues;
     }
 
-
     if (DEBUG_MODE) {
         console.log('resolving ', request);
     }
 
-    let paths: string[] | false | undefined;
-    let iterations = 0;
+    for (const paths of pathsGenerator) {
+        for (const modulePath of paths) {
+            // we need to find a package json, to get the peer dependencies.
+            const packageJsonPath = toPackageJsonPath(modulePath);
+            const peerDependencies = fetchPeerDependencies(packageJsonPath);
 
-    for (paths of pathsGenerator) {
+            // if we cannot find any package json then just continue without doing anything.
+            if (!peerDependencies) {
+                if (DEBUG_MODE) {
+                    console.debug('Cannot find package json at path', packageJsonPath);
+                }
+                continue;
+            }
 
-        // we need to find a package json, to get the peer dependencies.
-        const packageJsonPath = fetchPackageJsonPath(paths);
-
-        // if we cannot find any package json then just continue without doing anything.
-        if (!packageJsonPath) {
             if (DEBUG_MODE) {
-                console.warn('Cannot find package json path from paths', paths);
+                console.log('peer dependencies for', packageJsonPath, peerDependencies);
             }
-            return originalValues;
-        }
+            const isRootDir = new RegExp(rootDir + '(?:/?node_modules/?)$').test(modulePath);
 
-        const peerDependencies = fetchPeerDependencies(packageJsonPath);
-
-        if (DEBUG_MODE) {
-            console.log('peer dependencies for', packageJsonPath, peerDependencies);
-        }
-
-        // if this current module is non existent in the peer dependencies then resolve it like normal.
-        if (!peerDependencies.includes(request)) {
-            // if it does not have it in the peer dependencies for the very first iteration then continue like normal
-            // if (iterations === 0) {
-            //     return original;
-            // }
-            break;
-        }
-        else {
-            paths = undefined;
-        }
-
-        iterations++;
-    }
-
-    // if it gets into here it means that all parent modules had this package as a peer dependency.
-    if (!paths) {
-        if (DEBUG_MODE) {
-            console.warn('All paths apparently have peer dependencies', paths);
-        }
-
-        return originalValues;
-    }
-
-    /*
-        if it makes it to here then we are dealing with a child package that is a peer dependency of this package.
-        So what we want to do now is check if the parent module has this module as a symbolic link or not.
-        If it is a symbolic link then we want to recursively check if the parent also has that package as a peer dependency.
-        And use the module from the parent module which does not have it as a peer dependency.
-     */
-
-    const pieces = request.split('/');
-
-    let finalPiece: fs.Stats | undefined;
-    let finalPath: string | undefined;
-
-    const result = paths.find(basicPath => {
-        const modulesPath = /node_modules\/?$/.test(basicPath) ? basicPath : path.join(basicPath, 'node_modules');
-
-        for (let i = 1; i <= pieces.length; i++) {
-            finalPath = path.join(modulesPath, ...pieces.slice(0, i));
-            if (DEBUG_MODE) {
-                console.log('looking at ', finalPath);
+            if (DEBUG_MODE && isRootDir) {
+                console.debug('we have reached the root package json dir', modulePath);
             }
-            try {
-                // check if this file exists. Not looking navigating to a linked directory.
-                finalPiece = fs.lstatSync(finalPath);
-            } catch (e) {
-                // only check the file extensions if its on the last piece
-                if (i === pieces.length) {
-                    // check all file extensions with the final path
-                    for (const ext of resolveExtensions) {
-                        // check all filepaths that potentially have a .js extension
-                        finalPath = path.join(modulesPath, ...pieces.slice(0, i - 1), `${pieces[i - 1]}${ext.startsWith('.') ? ext : `.${ext}`}`);
-                        if (DEBUG_MODE) {
-                            console.log('looking at ', finalPath);
-                        }
-                        try {
-                            finalPiece = fs.lstatSync(finalPath);
-                            if (DEBUG_MODE) {
-                                console.log('found', finalPath);
-                            }
-                            return true;
-                        } catch (e) {
-                            if (DEBUG_MODE) {
-                                console.warn(e.message);
-                            }
-                            // let the return false take place
-                        }
-                    }
+
+            // if this current module is non existent in the peer dependencies then resolve it like normal.
+            if (!peerDependencies.includes(request) || isRootDir) {
+                const result = getDependencyFilename(request, packageJsonPath, resolveExtensions, DEBUG_MODE);
+
+                if (result) {
+                    return result;
                 }
-                return false;
+
+                if (DEBUG_MODE) {
+                    console.warn('Expected to find a dependency for ', modulePath, request, 'but nothing was found.');
+                }
+
+                return originalValues;
             }
         }
-        if (DEBUG_MODE) {
-            console.log('found', finalPath);
-        }
-        return true;
-    });
-
-    if (!result) {
-        if (DEBUG_MODE) {
-            console.warn('Could not resolve package', { request, paths });
-        }
-        return originalValues;
-    }
-
-    if (finalPiece && finalPath) {
-        // if the final piece is a directory get the main file from package json
-        if (finalPiece.isDirectory() || finalPiece.isSymbolicLink()) {
-            const modulePath = finalPath;
-            const mainFile = fetchMainFile(finalPath);
-            finalPath = path.join(finalPath, mainFile);
-            try {
-                // check to see what type of piece the final piece is now
-                finalPiece = fs.lstatSync(finalPath);
-
-                // if it is still a directory then add index.js onto the end.
-                if (finalPiece.isDirectory()) {
-                    finalPath = path.join(finalPath, 'index.js');
-                    finalPiece = fs.lstatSync(finalPath);
-                }
-            } catch (e) {
-                const result = resolveExtensions.find(ext => {
-                    try {
-                        finalPath = path.join(modulePath, mainFile + (ext.startsWith('.') ? ext : `.${ext}`));
-                        finalPiece = fs.lstatSync(finalPath);
-                        return true;
-                    }
-                    catch(e) {
-                        return false;
-                    }
-                });
-
-                if (!result) {
-                    if (DEBUG_MODE) {
-                        console.warn('Failed to resolve module.', {
-                            paths, error: e, mainFile, modulePath, request
-                        });
-                    }
-                    return originalValues;
-                }
-            }
-        }
-
-        return finalPath;
     }
 
     if (DEBUG_MODE) {
-        console.warn('No final piece of final path', {
-            paths, finalPiece, finalPath,
-        });
+        console.warn('Could not resolve package', request);
     }
 
     return originalValues;
