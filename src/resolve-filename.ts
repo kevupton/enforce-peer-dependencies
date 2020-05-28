@@ -194,11 +194,11 @@ function resolveFilename(
                     return result;
                 }
 
-                if (DEBUG_MODE) {
-                    console.warn('Expected to find a dependency for ', modulePath, request, 'but nothing was found.');
-                }
-
-                return originalValues;
+                // if (DEBUG_MODE) {
+                //     console.warn('Expected to find a dependency for ', modulePath, request, 'but nothing was found.');
+                // }
+                //
+                // // return originalValues;
             }
         }
     }
