@@ -32,7 +32,7 @@ nodeModule._resolveFilename = function (...args: any[]) {
 
     const originalValue = previousMethod.apply(this, args);
 
-    if (request.startsWith('.') || !originalValue.startsWith('/')) {
+    if (request.startsWith('.') || request.startsWith('/') || !originalValue.startsWith('/')) {
         return originalValue;
     }
 
@@ -55,13 +55,17 @@ nodeModule._resolveFilename = function (...args: any[]) {
 
     const rootPath = path.join(packageJsonPath, '../');
 
+    if (debug) {
+        console.log('PACKAGE', request);
+    }
+
     const output = resolveFilename(
         request,
         createIterator(packageModule),
         originalValue,
         rootPath,
         undefined,
-        process.env.DEBUG_ENFORCE_PEER_DEPENDENCIES !== undefined
+        debug
     );
 
     if (debug) {
