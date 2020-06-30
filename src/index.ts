@@ -33,11 +33,9 @@ nodeModule._resolveFilename = function (...args: any[]) {
     const originalValue = previousMethod.apply(this, args);
 
     if (request.startsWith('.') || request.startsWith('/') || !originalValue.startsWith('/')) {
-        return originalValue;
-    }
-
-    // we dont want to look at the root module. We want to look at any possible linked module.
-    if (!packageModule.parent) {
+        if (debug) {
+            console.log('RETURNING ORIGINAL', request, originalValue);
+        }
         return originalValue;
     }
 
